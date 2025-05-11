@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌱 Raiz Inteligente | Monitoramento Avançado</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js">
+  <link rel="stylesheet" href="mainV3.css">
+</head>
+<body class="light-mode">
+
+  <nav class="main-nav">
+    <div class="container nav-container">
+      <div class="nav-brand">
+        <div class="logo">🌱</div>
+        <h1>Raiz Inteligente</h1>
+      </div>
+      <div class="theme-toggle">
+        <button id="themeToggle" aria-label="Alternar tema">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <header>
+    <div class="container">
+      <h2>Sistema de Monitoramento e Alerta para Áreas de Risco</h2>
+      <div class="connection-indicator disconnected" id="connectionStatus">
+        <i class="fas fa-unlink"></i> Desconectado
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <!-- Painel de Controle -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="fas fa-tachometer-alt"></i> Painel de Controle</h3>
+        </div>
+        <div class="card-body">
+          <div class="buttons-container">
+            <button class="btn btn-primary" onclick="conectar()">
+              <i class="fas fa-bluetooth"></i> Conectar Sensor
+            </button>
+            <button class="btn btn-secondary" onclick="desligarBuzzer()" id="btnDesligarAlarme" disabled>
+              <i class="fas fa-volume-mute"></i> Silenciar Alarme
+            </button>
+            <button class="btn btn-warning" onclick="testarBuzzer()" id="btnTestarAlarme" disabled>
+              <i class="fas fa-bell"></i> Testar Alarme
+            </button>
+            <a href="tel:199" class="btn btn-danger">
+              <i class="fas fa-phone-alt"></i> Defesa Civil (199)
+            </a>
+          </div>
+
+          <div class="status-panel">
+            <!-- Abas para visualização de sensores individuais ou combinados -->
+            <div class="sensor-tabs">
+              <button class="sensor-tab active" data-sensor="combined">Média</button>
+              <button class="sensor-tab" data-sensor="sensor1" id="sensor1Tab">Sensor 1</button>
+              <button class="sensor-tab" data-sensor="sensor2" id="sensor2Tab">Sensor 2</button>
+            </div>
+            
+            <div class="moisture-display">
+              <span class="moisture-label">Umidade do Solo:</span>
+              <span class="moisture-value" id="umidade">---</span>
+            </div>
+            
+            <div class="progress-container">
+              <div class="progress-bar" id="umidadeBar" style="width: 0%"></div>
+            </div>
+            
+            <div class="moisture-scale">
+              <span class="moisture-scale-dry">Seco (0)</span>
+              <span class="moisture-scale-wet">Encharcado (4095)</span>
+            </div>
+
+            <div class="alert alert-danger" id="alerta">
+              <i class="fas fa-exclamation-triangle pulse"></i>
+              <span id="alertaTexto"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards-row">
+        <!-- Gráfico de Tendências -->
+        <div class="card card-wide">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-chart-line"></i> Tendências de Umidade</h3>
+            <div class="card-actions">
+              <button class="btn-icon" id="expandChart" title="Expandir gráfico">
+                <i class="fas fa-expand"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="umidadeChart" height="200"></canvas>
+          </div>
+        </div>
+
+        <!-- Configurações Avançadas -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-sliders-h"></i> Configurações</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label for="limiarInput">Limiar de Alerta:</label>
+              <div class="input-with-button">
+                <input type="number" id="limiarInput" min="0" max="4095" value="800" class="form-control">
+                <button class="btn btn-sm" id="btnSalvarLimiar">Salvar</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Modo de Energia:</label>
+              <div class="mode-selector">
+                <button class="mode-btn active" data-mode="0">Normal</button>
+                <button class="mode-btn" data-mode="1">Economia</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="intervaloInput">Intervalo de Envio (ms):</label>
+              <div class="input-with-button">
+                <input type="number" id="intervaloInput" min="1000" step="1000" value="2000" class="form-control">
+                <button class="btn btn-sm" id="btnSalvarIntervalo">Salvar</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="notificationToggle">Notificações:</label>
+              <div class="toggle-switch">
+                <input type="checkbox" id="notificationToggle">
+                <label for="notificationToggle"></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards-row">
+        <!-- Localização do Sensor -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-map-marker-alt"></i> Localização</h3>
+          </div>
+          <div class="card-body location-card">
+            <div id="map" class="sensor-map"></div>
+            <div class="location-controls">
+              <button class="btn btn-sm btn-secondary" id="btnGeolocate">
+                <i class="fas fa-crosshairs"></i> Definir Localização Atual
+              </button>
+              <div class="coordinates">
+                <div><span>Lat: </span><span id="latCoord">--.----</span></div>
+                <div><span>Lng: </span><span id="lngCoord">--.----</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Histórico de Leituras -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-history"></i> Histórico de Leituras</h3>
+            <div class="card-actions">
+              <button class="btn-icon" id="exportData" title="Exportar dados">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <ul class="history-list" id="listaHistorico">
+              <li class="empty-history">
+                <i class="fas fa-info-circle"></i> Conecte o sensor para visualizar os dados
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guia de Interpretação -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="fas fa-book"></i> Guia de Interpretação</h3>
+          <div class="card-actions">
+            <button class="btn-icon" id="toggleGuide">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body guide-content" id="guideContent">
+          <div class="guide-item">
+            <div class="guide-icon safe">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="guide-info">
+              <h4>Nível Normal (> 1500)</h4>
+              <p>Solo com umidade adequada ou baixa. Não há riscos imediatos de deslizamentos ou erosão. Situação segura.</p>
+            </div>
+          </div>
+          <div class="guide-item">
+            <div class="guide-icon warning">
+              <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <div class="guide-info">
+              <h4>Nível de Atenção (800 - 1500)</h4>
+              <p>Solo com umidade elevada. Recomenda-se monitoramento frequente. Risco moderado em caso de chuvas intensas.</p>
+            </div>
+          </div>
+          <div class="guide-item">
+            <div class="guide-icon danger">
+              <i class="fas fa-radiation"></i>
+            </div>
+            <div class="guide-info">
+              <h4>Nível Crítico (< 800)</h4>
+              <p>Solo encharcado. Alto risco de deslizamentos. Recomenda-se comunicar autoridades e considerar evacuação preventiva.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="footer-logo">🌱</div>
+          <p>Raiz Inteligente</p>
+        </div>
+        <div class="footer-info">
+          <p>&copy; 2025 - Sistema de Prevenção de Deslizamentos</p>
+          <p class="team-info">Desenvolvido pela Equipe ECAF – HackaNav 2025</p>
+        </div>
+        <div class="version-info">
+          <p>Versão 3.0</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal para exibição de gráfico em tela cheia -->
+  <div class="modal" id="chartModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Análise Detalhada de Umidade</h3>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <canvas id="expandedChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+  <script>
+    // Variáveis globais
+    let dispositivo, umidadeChar, buzzerChar, sensorConfigChar, locationChar, powerModeChar;
+    let estaConectado = false;
+    let dadosHistoricos = [];
+    let umidadeChart;
+    let expandedChart;
+    let valorSensor1 = 0;
+    let valorSensor2 = 0;
+    let valorMedio = 0;
+    let sensorAtual = "combined";
+    let temNotificacao = false;
+    let intervaloDados = 2000;
+    let limiarRisco = 800;
+
+    // Configurações do Charts.js
+    const chartColors = {
+      red: 'rgb(255, 99, 132)',
+      orange: 'rgb(255, 159, 64)',
+      green: 'rgb(75, 192, 192)',
+      blue: 'rgb(54, 162, 235)'
+    };
+
+    // Verificar suporte ao Bluetooth
+    document.addEventListener('DOMContentLoaded', () => {
+      // Verificar suporte a Web Bluetooth
+      if (!navigator.bluetooth) {
+        mostrarMensagem("Este navegador não suporta Bluetooth. Por favor, use Chrome, Edge ou Opera.", "error");
+        document.querySelectorAll('.btn-primary').forEach(btn => btn.disabled = true);
+      }
+
+      // Verificar suporte a Web Notifications
+      if ("Notification" in window) {
+        document.getElementById('notificationToggle').addEventListener('change', function() {
+          if (this.checked) {
+            solicitarPermissaoNotificacao();
+          } else {
+            temNotificacao = false;
+          }
+        });
+      } else {
+        document.getElementById('notificationToggle').disabled = true;
+        mostrarMensagem("Este navegador não suporta notificações.", "warning");
+      }
+
+      // Inicializar gráfico
+      inicializarGrafico();
+      
+      // Configurar eventos para interface
+      configurarEventos();
+    });
+
+    // Função para inicializar o gráfico
+    function inicializarGrafico() {
+      const ctx = document.getElementById('umidadeChart').getContext('2d');
+      
+      umidadeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Umidade do Solo',
+            data: [],
+            borderColor: chartColors.blue,
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false
+            }
+          },
+          scales: {
+            y: {
+              min: 0,
+              max: 4095,
+              reverse: true,
+              ticks: {
+                callback: function(value) {
+                  return value;
+                }
+              },
+              title: {
+                display: true,
+                text: 'Valor de Umidade'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Tempo (hh:mm:ss)'
+              }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'nearest'
+          }
+        }
+      });
+
+      // Inicializar gráfico expandido
+      const ctxExpanded = document.getElementById('expandedChart').getContext('2d');
+      
+      expandedChart = new Chart(ctxExpanded, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Sensor 1',
+            data: [],
+            borderColor: chartColors.red,
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.2
+          },
+          {
+            label: 'Sensor 2',
+            data: [],
+            borderColor: chartColors.green,
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.2
+          },
+          {
+            label: 'Média',
+            data: [],
+            borderColor: chartColors.blue,
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false
+            }
+          },
+          scales: {
+            y: {
+              min: 0,
+              max: 4095,
+              reverse: true,
+              ticks: {
+                callback: function(value) {
+                  return value;
+                }
+              },
+              title: {
+                display: true,
+                text: 'Valor de Umidade'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Tempo (hh:mm:ss)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Configurar eventos para componentes da interface
+    function configurarEventos() {
+      // Alternar tema claro/escuro
+      document.getElementById('themeToggle').addEventListener('click', alternarTema);
+      
+      // Expandir gráfico
+      document.getElementById('expandChart').addEventListener('click', () => {
+        document.getElementById('chartModal').style.display = 'flex';
+        atualizarGraficoExpandido();
+      });
+      
+      // Fechar modal
+      document.querySelector('.close-modal').addEventListener('click', () => {
+        document.getElementById('chartModal').style.display = 'none';
+      });
+      
+      // Fechar modal ao clicar fora
+      window.addEventListener('click', (e) => {
+        const modal = document.getElementById('chartModal');
+        if (e.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+      
+      // Configurar seleção de sensor
+      document.querySelectorAll('.sensor-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          document.querySelectorAll('.sensor-tab').forEach(t => t.classList.remove('active'));
+          e.target.classList.add('active');
+          sensorAtual = e.target.dataset.sensor;
+          atualizarInterfaceSensor();
+        });
+      });
+      
+      // Configurar botões de modo de energia
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
+          if (estaConectado) {
+            definirModoPotencia(e.target.dataset.mode);
+          }
+        });
+      });
+      
+      // Salvar limiar
+      document.getElementById('btnSalvarLimiar').addEventListener('click', () => {
+        const novoLimiar = document.getElementById('limiarInput').value;
+        limiarRisco = parseInt(novoLimiar);
+        if (estaConectado) {
+          salvarConfiguracao(`limiar:${novoLimiar}`);
+        }
+        mostrarMensagem("Limiar atualizado para " + novoLimiar, "success");
+      });
+      
+      // Salvar intervalo
+      document.getElementById('btnSalvarIntervalo').addEventListener('click', () => {
+        const novoIntervalo = document.getElementById('intervaloInput').value;
+        intervaloDados = parseInt(novoIntervalo);
+        if (estaConectado) {
+          salvarConfiguracao(`intervalo:${novoIntervalo}`);
+        }
+        mostrarMensagem("Intervalo atualizado para " + novoIntervalo + "ms", "success");
+      });
+      
+      // Botão de geolocalização
+      document.getElementById('btnGeolocate').addEventListener('click', obterLocalizacaoAtual);
+      
+      // Exportar dados
+      document.getElementById('exportData').addEventListener('click', exportarDados);
+      
+      // Alternar visibilidade do guia
+      document.getElementById('toggleGuide').addEventListener('click', () => {
+        const guideContent = document.getElementById('guideContent');
+        const toggleIcon = document.querySelector('#toggleGuide i');
+        
+        if (guideContent.classList.contains('collapsed')) {
+          guideContent.classList.remove('collapsed');
+          toggleIcon.className = 'fas fa-chevron-up';
+        } else {
+          guideContent.classList.add('collapsed');
+          toggleIcon.className = 'fas fa-chevron-down';
+        }
+      });
+    }
+
+    // Função para atualizar interface com dados do sensor selecionado
+    function atualizarInterfaceSensor() {
+      let valor;
+      
+      switch(sensorAtual) {
+        case "sensor1":
+          valor = valorSensor1;
+          break;
+        case "sensor2":
+          valor = valorSensor2;
+          break;
+        default:
+          valor = valorMedio;
+      }
+      
+      // Atualiza visualização
+      document.getElementById('umidade').textContent = valor;
+      
+      // Atualiza barra de progresso (invertido: 0 = 100%, 4095 = 0%)
+      const porcentagem = 100 - (valor / 4095 * 100);
+      document.getElementById('umidadeBar').style.width = porcentagem + "%";
+      
+      // Atualiza classes de alerta conforme o valor
+      atualizarClassesAlerta(valor);
+    }
+
+    // Função para atualizar classes de alerta com base no valor
+    function atualizarClassesAlerta(valor) {
+      const alerta = document.getElementById('alerta');
+      const alertaTexto = document.getElementById('alertaTexto');
+      
+      if (valor < limiarRisco) {
+        alertaTexto.textContent = "ALTA UMIDADE DETECTADA - RISCO DE DESLIZAMENTO!";
+        alerta.classList.add("show");
+      } else {
+        alerta.classList.remove("show");
+      }
+    }
+
+    // Função para conectar ao dispositivo Bluetooth
+    async function conectar() {
+      try {
+        dispositivo = await navigator.bluetooth.requestDevice({
+          filters: [{ name: "Raiz Inteligente" }],
+          optionalServices: ["12345678-1234-1234-1234-1234567890ab"]
+        });
+
+        // Escutar pelo evento de desconexão
+        dispositivo.addEventListener('gattserverdisconnected', onDesconectado);
+
+        const server = await dispositivo.gatt.connect();
+        const service = await server.getPrimaryService("12345678-1234-1234-1234-1234567890ab");
+
+        // Obter características
+        umidadeChar = await service.getCharacteristic("abcd1234-5678-1234-5678-abcdef123456");
+        buzzerChar = await service.getCharacteristic("buzz4321-5678-1234-5678-abcdef654321");
+        
+        try {
+          sensorConfigChar = await service.getCharacteristic("conf9876-5678-1234-5678-abcdef456789");
+          locationChar = await service.getCharacteristic("loct5678-5678-1234-5678-abcdef123456");
+          powerModeChar = await service.getCharacteristic("powr3456-5678-1234-5678-abcdef123456");
+        } catch (erro) {
+          console.warn("Funcionalidades avançadas não disponíveis neste dispositivo", erro);
+        }
+
+        // Iniciar notificações
+        await umidadeChar.startNotifications();
+
+        umidadeChar.addEventListener("characteristicvaluechanged", event => {
+          const valorRaw = new TextDecoder().decode(event.target.value);
+          const valores = valorRaw.split(',');
+          
+          if (valores.length >= 3) {
+            // Formato: "valor1,valor2,media"
+            valorSensor1 = parseInt(valores[0]);
+            valorSensor2 = parseInt(valores[1]);
+            valorMedio = parseInt(valores[2]);
+          } else {
+            // Formato antigo: apenas valor médio
+            valorMedio = parseInt(valorRaw);
+            // Estimar valores individuais pela falta de dados
+            valorSensor1 = valorMedio;
+            valorSensor2 = valorMedio;
+          }
+          
+          // Atualizar interface
+          atualizarTela(valorSensor1, valorSensor2, valorMedio);
+        });
+
+        // Limpar o histórico ao conectar
+        limparHistorico();
+        limparGrafico();
+        
+        // Atualizar status de conexão
+        atualizarStatusConexao(true);
+        
+        mostrarMensagem("Sensor conectado com sucesso!", "success");
+      } catch (erro) {
+        console.error("Erro ao conectar:", erro);
+        mostrarMensagem("Falha ao conectar: " + erro, "error");
+      }
+    }
+
+    // Função para desconectar dispositivo
+    function onDesconectado() {
+      atualizarStatusConexao(false);
+      mostrarMensagem("Dispositivo desconectado", "warning");
+    }
+
+    // Função para atualizar status de conexão na interface
+    function atualizarStatusConexao(conectado) {
+      const statusEl = document.getElementById("connectionStatus");
+      const btnAlarme = document.getElementById("btnDesligarAlarme");
+      const btnTeste = document.getElementById("btnTestarAlarme");
+      
+      if (conectado) {
+        statusEl.className = "connection-indicator connected";
+        statusEl.innerHTML = '<i class="fas fa-link"></i> Conectado';
+        btnAlarme.disabled = false;
+        btnTeste.disabled = false;
+        estaConectado = true;
+      } else {
+        statusEl.className = "connection-indicator disconnected";
+        statusEl.innerHTML = '<i class="fas fa-unlink"></i> Desconectado';
+        btnAlarme.disabled = true;
+        btnTeste.disabled = true;
+        estaConectado = false;
+      }
+    }
+
+    // Função para limpar o histórico
+    function limparHistorico() {
+      const lista = document.getElementById("listaHistorico");
+      lista.innerHTML = '';
+      dadosHistoricos = [];
+    }
+
+    // Função para limpar gráfico
+    function limparGrafico() {
+      umidadeChart.data.labels = [];
+      umidadeChart.data.datasets[0].data = [];
+      umidadeChart.update();
+    }
+
+    // Função para atualizar gráfico expandido
+    function atualizarGraficoExpandido() {
+      // Reconstruir gráfico expandido com dados históricos completos
+      expandedChart.data.labels = dadosHistoricos.map(d => d.hora);
+      expandedChart.data.datasets[0].data = dadosHistoricos.map(d => d.sensor1);
+      expandedChart.data.datasets[1].data = dadosHistoricos.map(d => d.sensor2);
+      expandedChart.data.datasets[2].data = dadosHistoricos.map(d => d.media);
+      expandedChart.update();
+    }
+
+    // Função para atualizar a interface com o valor de umidade
+    function atualizarTela(sensor1, sensor2, media) {
+      // Determinar o nível de risco baseado na umidade
+      let nivelRisco;
+      let classeHistorico;
+      let alertaAtivo = false;
+      
+      if (media < limiarRisco) {
+        nivelRisco = "CRÍTICO";
+        classeHistorico = "danger";
+        alertaAtivo = true;
+        
+        // Verifica se devemos enviar notificação
+        if (temNotificacao) {
+          enviarNotificacao("ALERTA DE RISCO", "Alta umidade detectada - Risco de deslizamento!");
+        }
+        
+      } else if (media < 1500) {
+        nivelRisco = "ATENÇÃO";
+        classeHistorico = "warning";
+      } else {
+        nivelRisco = "NORMAL";
+        classeHistorico = "";
+      }
+      
+      // Atualizar o valor exibido conforme sensor selecionado
+      valorSensor1 = sensor1;
+      valorSensor2 = sensor2;
+      valorMedio = media;
+      atualizarInterfaceSensor();
+      
+      // Adicionar ao histórico e ao gráfico
+      const agora = new Date();
+      const horaFormatada = agora.toLocaleTimeString();
+      
+      // Guardar dados históricos
+      dadosHistoricos.push({
+        timestamp: agora,
+        hora: horaFormatada,
+        sensor1: sensor1,
+        sensor2: sensor2,
+        media: media,
+        nivel: nivelRisco
+      });
+      
+      // Limitar histórico a 100 pontos para performance
+      if (dadosHistoricos.length > 100) {
+        dadosHistoricos.shift();
+      }
+      
+      // Atualizar gráfico com novos dados
+      atualizarGrafico(horaFormatada, media);
+      
+      // Adicionar ao histórico visual
+      adicionarAoHistorico(media, nivelRisco, horaFormatada, classeHistorico);
+    }
+
+    // Função para atualizar o gráfico
+    function atualizarGrafico(label, valor) {
+      // Limitar a 10 pontos visíveis para melhor legibilidade
+      if (umidadeChart.data.labels.length > 10) {
+        umidadeChart.data.labels.shift();
+        umidadeChart.data.datasets[0].data.shift();
+      }
+      
+      umidadeChart.data.labels.push(label);
+      umidadeChart.data.datasets[0].data.push(valor);
+      umidadeChart.update();
+    }
+
+    // Função para adicionar ao histórico visual
+    function adicionarAoHistorico(valor, nivelRisco, hora, classe) {
+      const lista = document.getElementById("listaHistorico");
+      
+// Remover mensagem inicial se existir
+      const emptyMsg = lista.querySelector('.empty-history');
+      if (emptyMsg) {
+        lista.removeChild(emptyMsg);
+      }
+      
+      // Limitar a 10 itens visíveis
+      if (lista.children.length > 9) {
+        lista.removeChild(lista.lastChild);
+      }
+      
+      // Criar novo item de histórico
+      const item = document.createElement('li');
+      item.className = `history-item ${classe}`;
+      
+      item.innerHTML = `
+        <div class="history-time">${hora}</div>
+        <div class="history-value">${valor}</div>
+        <div class="history-status ${classe}">${nivelRisco}</div>
+      `;
+      
+      // Adicionar ao início da lista
+      lista.insertBefore(item, lista.firstChild);
+    }
+
+    // Função para desligar o buzzer/alarme
+    async function desligarBuzzer() {
+      if (!estaConectado) return;
+      
+      try {
+        await buzzerChar.writeValue(new TextEncoder().encode("0"));
+        mostrarMensagem("Alarme silenciado", "success");
+      } catch (erro) {
+        console.error("Erro ao silenciar alarme:", erro);
+        mostrarMensagem("Falha ao silenciar alarme", "error");
+      }
+    }
+
+    // Função para testar o buzzer/alarme
+    async function testarBuzzer() {
+      if (!estaConectado) return;
+      
+      try {
+        await buzzerChar.writeValue(new TextEncoder().encode("1"));
+        mostrarMensagem("Testando alarme... (5 segundos)", "info");
+        
+        // Desligar após 5 segundos
+        setTimeout(async () => {
+          await buzzerChar.writeValue(new TextEncoder().encode("0"));
+        }, 5000);
+      } catch (erro) {
+        console.error("Erro ao testar alarme:", erro);
+        mostrarMensagem("Falha ao testar alarme", "error");
+      }
+    }
+
+    // Função para salvar configurações do sensor
+    async function salvarConfiguracao(config) {
+      if (!estaConectado || !sensorConfigChar) return;
+      
+      try {
+        await sensorConfigChar.writeValue(new TextEncoder().encode(config));
+        mostrarMensagem("Configuração salva no dispositivo", "success");
+      } catch (erro) {
+        console.error("Erro ao salvar configuração:", erro);
+        mostrarMensagem("Falha ao salvar configuração", "error");
+      }
+    }
+
+    // Função para definir modo de potência
+    async function definirModoPotencia(modo) {
+      if (!estaConectado || !powerModeChar) return;
+      
+      try {
+        await powerModeChar.writeValue(new TextEncoder().encode(modo));
+        const modoTexto = modo === "0" ? "normal" : "economia de energia";
+        mostrarMensagem(`Modo ${modoTexto} ativado`, "success");
+      } catch (erro) {
+        console.error("Erro ao definir modo de energia:", erro);
+        mostrarMensagem("Falha ao definir modo de energia", "error");
+      }
+    }
+
+    // Função para obter localização atual
+    function obterLocalizacaoAtual() {
+      if (!navigator.geolocation) {
+        mostrarMensagem("Geolocalização não suportada neste navegador", "error");
+        return;
+      }
+      
+      mostrarMensagem("Obtendo localização...", "info");
+      
+      navigator.geolocation.getCurrentPosition(async (posicao) => {
+        const latitude = posicao.coords.latitude;
+        const longitude = posicao.coords.longitude;
+        
+        // Atualizar interface
+        document.getElementById('latCoord').textContent = latitude.toFixed(4);
+        document.getElementById('lngCoord').textContent = longitude.toFixed(4);
+        
+        // Atualizar mapa se existir
+        atualizarMapa(latitude, longitude);
+        
+        // Enviar para o dispositivo se conectado
+        if (estaConectado && locationChar) {
+          try {
+            await locationChar.writeValue(new TextEncoder().encode(`${latitude},${longitude}`));
+            mostrarMensagem("Localização salva no dispositivo", "success");
+          } catch (erro) {
+            console.error("Erro ao salvar localização:", erro);
+            mostrarMensagem("Falha ao salvar localização no dispositivo", "error");
+          }
+        }
+      }, (erro) => {
+        console.error("Erro ao obter localização:", erro);
+        let mensagemErro = "Erro ao obter localização";
+        
+        switch(erro.code) {
+          case erro.PERMISSION_DENIED:
+            mensagemErro = "Acesso à localização negado pelo usuário";
+            break;
+          case erro.POSITION_UNAVAILABLE:
+            mensagemErro = "Informação de localização indisponível";
+            break;
+          case erro.TIMEOUT:
+            mensagemErro = "Tempo excedido ao obter localização";
+            break;
+        }
+        
+        mostrarMensagem(mensagemErro, "error");
+      });
+    }
+
+    // Função para atualizar mapa
+    function atualizarMapa(lat, lng) {
+      const mapDiv = document.getElementById('map');
+      
+      // Aqui seria possível integrar com APIs como Google Maps ou Leaflet
+      // Por enquanto, apenas exibimos uma imagem estática
+      mapDiv.innerHTML = `
+        <div class="map-placeholder">
+          <i class="fas fa-map-marker-alt map-pin"></i>
+          <div class="map-text">Sensor localizado em: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+        </div>
+      `;
+    }
+
+    // Função para exportar dados
+    function exportarDados() {
+      if (dadosHistoricos.length === 0) {
+        mostrarMensagem("Sem dados para exportar", "warning");
+        return;
+      }
+      
+      // Construir CSV
+      let csv = 'Data,Hora,Sensor1,Sensor2,Media,Nivel\n';
+      
+      dadosHistoricos.forEach(dado => {
+        const data = dado.timestamp.toLocaleDateString();
+        csv += `${data},${dado.hora},${dado.sensor1},${dado.sensor2},${dado.media},${dado.nivel}\n`;
+      });
+      
+      // Criar blob e download
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `raiz-inteligente-dados-${new Date().toISOString().slice(0,10)}.csv`);
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      mostrarMensagem("Dados exportados com sucesso", "success");
+    }
+
+    // Função para solicitar permissão de notificação
+    function solicitarPermissaoNotificacao() {
+      if (!("Notification" in window)) {
+        mostrarMensagem("Este navegador não suporta notificações", "error");
+        return;
+      }
+      
+      Notification.requestPermission().then(permissao => {
+        if (permissao === "granted") {
+          temNotificacao = true;
+          mostrarMensagem("Notificações ativadas", "success");
+          
+          // Enviar notificação de teste
+          enviarNotificacao("Raiz Inteligente", "Notificações de alerta ativadas");
+        } else {
+          document.getElementById('notificationToggle').checked = false;
+          mostrarMensagem("Permissão para notificações negada", "warning");
+        }
+      });
+    }
+
+    // Função para enviar notificação
+    function enviarNotificacao(titulo, texto) {
+      if (!temNotificacao) return;
+      
+      const opcoes = {
+        body: texto,
+        icon: "/favicon.ico", // Adicionar caminho para favicon
+        vibrate: [200, 100, 200],
+        tag: "raiz-alerta"
+      };
+      
+      new Notification(titulo, opcoes);
+    }
+
+    // Função para alternar tema claro/escuro
+    function alternarTema() {
+      const body = document.body;
+      const iconeTema = document.querySelector('#themeToggle i');
+      
+      if (body.classList.contains('light-mode')) {
+        body.classList.remove('light-mode');
+        body.classList.add('dark-mode');
+        iconeTema.className = 'fas fa-sun';
+        localStorage.setItem('tema', 'dark');
+      } else {
+        body.classList.remove('dark-mode');
+        body.classList.add('light-mode');
+        iconeTema.className = 'fas fa-moon';
+        localStorage.setItem('tema', 'light');
+      }
+    }
+
+    // Função para mostrar mensagens temporárias
+    function mostrarMensagem(texto, tipo = "info") {
+      // Criar o elemento de mensagem se não existir
+      let toastContainer = document.querySelector('.toast-container');
+      
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container';
+        document.body.appendChild(toastContainer);
+      }
+      
+      // Criar o toast
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${tipo}`;
+      
+      // Definir ícone com base no tipo
+      let icone = 'info-circle';
+      switch (tipo) {
+        case 'success':
+          icone = 'check-circle';
+          break;
+        case 'warning':
+          icone = 'exclamation-triangle';
+          break;
+        case 'error':
+          icone = 'times-circle';
+          break;
+      }
+      
+      toast.innerHTML = `
+        <i class="fas fa-${icone}"></i>
+        <span>${texto}</span>
+      `;
+      
+      // Adicionar à container
+      toastContainer.appendChild(toast);
+      
+      // Remover após 5 segundos
+      setTimeout(() => {
+        toast.classList.add('toast-fade-out');
+        setTimeout(() => {
+          if (toastContainer.contains(toast)) {
+            toastContainer.removeChild(toast);
+          }
+          
+          // Remover container se vazia
+          if (toastContainer.children.length === 0) {
+            document.body.removeChild(toastContainer);
+          }
+        }, 300);
+      }, 5000);
+    }
+
+    // Carregar tema do localStorage ao iniciar
+    (function() {
+      const temaSalvo = localStorage.getItem('tema');
+      
+      if (temaSalvo === 'dark') {
+        document.body.classList.remove('light-mode');
+        document.body.classList.add('dark-mode');
+        document.querySelector('#themeToggle i').className = 'fas fa-sun';
+      }
+    })();
+  </script>
+
+  <!-- Inicializar mapa placeholder -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mapDiv = document.getElementById('map');
+      mapDiv.innerHTML = `
+        <div class="map-placeholder">
+          <i class="fas fa-map"></i>
+          <div class="map-text">Conecte o sensor para definir localização</div>
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>
