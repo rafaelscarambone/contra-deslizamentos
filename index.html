@@ -8,7 +8,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+
   <link rel="stylesheet" href="main.css">
 </head>
 <body class="light-mode">
@@ -891,19 +898,39 @@
       });
     }
 
-    // Função para atualizar mapa
-    function atualizarMapa(lat, lng) {
-      const mapDiv = document.getElementById('map');
-      
-      // Aqui seria possível integrar com APIs como Google Maps ou Leaflet
-      // Por enquanto, apenas exibimos uma imagem estática
-      mapDiv.innerHTML = `
-        <div class="map-placeholder">
-          <i class="fas fa-map-marker-alt map-pin"></i>
-          <div class="map-text">Sensor localizado em: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
-        </div>
-      `;
-    }
+let mapaLeaflet;
+
+function atualizarMapa(lat, lng) {
+  const mapDiv = document.getElementById('map');
+
+  // Remove mapa anterior se existir
+  if (mapaLeaflet) {
+    mapaLeaflet.remove();
+  }
+
+  // Cria o mapa com zoom reduzido (para mostrar área mais ampla)
+  mapaLeaflet = L.map(mapDiv).setView([lat, lng], 14); // zoom 14 mostra aprox. 1–2 km de raio
+
+  // Adiciona camada do OpenStreetMap
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(mapaLeaflet);
+
+  // Adiciona marcador
+  L.marker([lat, lng]).addTo(mapaLeaflet)
+    .bindPopup('Localização aproximada do sensor')
+    .openPopup();
+
+  // Adiciona círculo com raio de 1 km
+  L.circle([lat, lng], {
+    radius: 1000,
+    color: '#2E7D32',
+    fillColor: '#81C784',
+    fillOpacity: 0.3
+  }).addTo(mapaLeaflet);
+}
+
+
 
     // Função para exportar dados
     function exportarDados() {
