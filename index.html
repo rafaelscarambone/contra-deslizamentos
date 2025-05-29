@@ -85,7 +85,7 @@
             
             <div class="moisture-scale">
               <span class="moisture-scale-dry">Seco (0)</span>
-              <span class="moisture-scale-wet">Encharcado (4095)</span>
+              <span class="moisture-scale-wet">Encharcado</span>
             </div>
 
             <div class="alert alert-danger" id="alerta">
@@ -540,7 +540,14 @@
     // Função para atualizar interface com dados do sensor selecionado
     function atualizarInterfaceSensor() {
       let valor;
-      
+
+      if (!estaConectado) {
+        document.getElementById('umidade').textContent = "---";
+        document.getElementById('umidadeBar').style.width = "0%";
+        atualizarClassesAlerta(null);
+        return;
+      }
+
       switch(sensorAtual) {
         case "sensor1":
           valor = valorSensor1;
@@ -551,15 +558,10 @@
         default:
           valor = valorMedio;
       }
-      
-      // Atualiza visualização
+
       document.getElementById('umidade').textContent = valor;
-      
-      // Atualiza barra de progresso (invertido: 0 = 100%, 4095 = 0%)
       const porcentagem = 100 - (valor / 4095 * 100);
       document.getElementById('umidadeBar').style.width = porcentagem + "%";
-      
-      // Atualiza classes de alerta conforme o valor
       atualizarClassesAlerta(valor);
     }
 
@@ -567,12 +569,19 @@
     function atualizarClassesAlerta(valor) {
       const alerta = document.getElementById('alerta');
       const alertaTexto = document.getElementById('alertaTexto');
-      
+
+      if (valor === null || valor === undefined) {
+        alerta.classList.remove("show");
+        alertaTexto.textContent = "";
+        return;
+      }
+
       if (valor < limiarRisco) {
         alertaTexto.textContent = "ALTA UMIDADE DETECTADA - RISCO DE DESLIZAMENTO!";
         alerta.classList.add("show");
       } else {
         alerta.classList.remove("show");
+        alertaTexto.textContent = "";
       }
     }
 
