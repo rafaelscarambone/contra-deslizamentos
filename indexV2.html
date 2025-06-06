@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 Raiz Inteligente | Monitoramento Avançado</title>
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS customizado -->
+    <link rel="stylesheet" href="stylesV2.css">
+</head>
+<body>
+    <!-- Container principal -->
+    <div class="container">
+        <!-- Cabeçalho com título e status de conexão -->
+        <header>
+            <h1><i class="fas fa-seedling"></i> Raiz Inteligente</h1>
+            <div class="connection-status" id="connectionStatus">
+                <i class="fas fa-circle"></i> Desconectado
+            </div>
+        </header>
+
+        <!-- Seção de controles principais -->
+        <div class="controls">
+            <!-- Botão de conexão serial -->
+            <button id="connectBtn" class="btn btn-primary">
+                <i class="fas fa-plug"></i> Conectar ESP32
+            </button>
+            
+            <!-- Botão de teste dos sensores -->
+            <button id="testBtn" class="btn btn-secondary" disabled>
+                <i class="fas fa-vial"></i> Testar Sensores
+            </button>
+            
+            <!-- Botão para resetar sistema -->
+            <button id="resetBtn" class="btn btn-danger" disabled>
+                <i class="fas fa-redo"></i> Resetar Sistema
+            </button>
+        </div>
+
+        <!-- Grid de cards para exibição dos sensores -->
+        <div class="sensor-grid">
+            <!-- Card do Sensor 1 -->
+            <div class="sensor-card">
+                <h3><i class="fas fa-tint"></i> Sensor 1</h3>
+                <div class="sensor-value" id="sensor1Value">--</div>
+                <div class="sensor-status" id="sensor1Status">Aguardando...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="sensor1Progress"></div>
+                </div>
+                <!-- Controle de irrigação para Sensor 1 -->
+                <div class="irrigation-control">
+                    <button class="btn btn-sm" onclick="irrigarPlanta(1, 10)" disabled>
+                        <i class="fas fa-water"></i> Irrigar 10s
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card do Sensor 2 -->
+            <div class="sensor-card">
+                <h3><i class="fas fa-tint"></i> Sensor 2</h3>
+                <div class="sensor-value" id="sensor2Value">--</div>
+                <div class="sensor-status" id="sensor2Status">Aguardando...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="sensor2Progress"></div>
+                </div>
+                <!-- Controle de irrigação para Sensor 2 -->
+                <div class="irrigation-control">
+                    <button class="btn btn-sm" onclick="irrigarPlanta(2, 10)" disabled>
+                        <i class="fas fa-water"></i> Irrigar 10s
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de configurações avançadas -->
+        <div class="settings-panel">
+            <h3><i class="fas fa-cog"></i> Configurações</h3>
+            <div class="settings-grid">
+                <!-- Configuração do limite seco -->
+                <div class="setting-item">
+                    <label for="dryLimit">Limite Seco:</label>
+                    <input type="number" id="dryLimit" value="2800" min="0" max="4095">
+                    <button onclick="atualizarLimite('seco')" class="btn btn-sm">Aplicar</button>
+                </div>
+                
+                <!-- Configuração do limite úmido -->
+                <div class="setting-item">
+                    <label for="wetLimit">Limite Úmido:</label>
+                    <input type="number" id="wetLimit" value="1200" min="0" max="4095">
+                    <button onclick="atualizarLimite('umido')" class="btn btn-sm">Aplicar</button>
+                </div>
+                
+                <!-- Configuração do intervalo de leitura -->
+                <div class="setting-item">
+                    <label for="readInterval">Intervalo (ms):</label>
+                    <input type="number" id="readInterval" value="2000" min="100" max="10000" step="100">
+                    <button onclick="atualizarIntervalo()" class="btn btn-sm">Aplicar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Console de logs para debug -->
+        <div class="console">
+            <h3><i class="fas fa-terminal"></i> Console</h3>
+            <div class="console-output" id="consoleOutput"></div>
+            <div class="console-input">
+                <input type="text" id="commandInput" placeholder="Digite um comando..." disabled>
+                <button onclick="enviarComandoCustom()" class="btn btn-sm" disabled>
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Rodapé com informações -->
+        <footer>
+            <p>🌱 Raiz Inteligente v2.0 | ESP32 + Web Serial API</p>
+            <p class="small">Compatível com Chrome 89+ e Edge 89+</p>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="scriptV2.js"></script>
+</body>
+</html>

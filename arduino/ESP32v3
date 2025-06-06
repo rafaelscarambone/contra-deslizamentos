@@ -1,0 +1,337 @@
+#include <ArduinoJson.h>
+
+// ===== CONFIGURAÇÃO DOS PINOS =====
+const int SENSOR1_PIN = 34;  // GPIO34 - Sensor de umidade 1 (ADC1_CH6)
+const int SENSOR2_PIN = 35;  // GPIO35 - Sensor de umidade 2 (ADC1_CH7)
+const int LED_PIN = 2;       // LED interno do ESP32 para feedback visual
+
+// ===== CONFIGURAÇÕES DE LEITURA =====
+// Valores de calibração dos sensores (ajustar conforme seu sensor)
+int LIMITE_SECO = 2800;      // Valor quando o solo está seco
+int LIMITE_UMIDO = 1200;     // Valor quando o solo está úmido
+const int VALOR_MIN_VALIDO = 100;   // Valor mínimo para considerar sensor conectado
+const int VALOR_MAX_VALIDO = 4000;  // Valor máximo para considerar sensor válido
+
+// ===== VARIÁVEIS GLOBAIS =====
+unsigned long ultimaLeitura = 0;     // Timestamp da última leitura
+unsigned long intervaloLeitura = 2000; // Intervalo entre leituras (ms)
+bool modoTeste = false;              // Flag para modo de teste
+String comandoBuffer = "";           // Buffer para comandos recebidos
+
+// ===== ESTRUTURA PARA DADOS DOS SENSORES =====
+struct DadosSensor {
+    int valor;
+    int porcentagem;
+    String status;
+    bool valido;
+};
+
+// ===== FUNÇÃO DE SETUP =====
+void setup() {
+    // Inicializa comunicação serial
+    Serial.begin(115200);
+    delay(1000); // Aguarda estabilização
+    
+    // Configura pinos
+    pinMode(LED_PIN, OUTPUT);
+    pinMode(SENSOR1_PIN, INPUT);
+    pinMode(SENSOR2_PIN, INPUT);
+    
+    // Mensagem inicial
+    Serial.println();
+    Serial.println("=================================");
+    Serial.println("   🌱 RAIZ INTELIGENTE v2.0 🌱   ");
+    Serial.println("=================================");
+    Serial.println("Sistema iniciado com sucesso!");
+    Serial.println();
+    
+    // Pisca LED para indicar inicialização
+    for(int i = 0; i < 3; i++) {
+        digitalWrite(LED_PIN, HIGH);
+        delay(200);
+        digitalWrite(LED_PIN, LOW);
+        delay(200);
+    }
+    
+    // Envia log de inicialização em JSON
+    enviarLog("Sistema iniciado", "success");
+}
+
+// ===== FUNÇÃO PRINCIPAL (LOOP) =====
+void loop() {
+    // Processa comandos recebidos via Serial
+    processarComandosSerial();
+    
+    // Realiza leitura dos sensores no intervalo configurado
+    if (millis() - ultimaLeitura >= intervaloLeitura) {
+        ultimaLeitura = millis();
+        
+        // Liga LED durante leitura
+        digitalWrite(LED_PIN, HIGH);
+        
+        // Lê e processa dados dos sensores
+        DadosSensor sensor1 = lerSensor(SENSOR1_PIN, 1);
+        DadosSensor sensor2 = lerSensor(SENSOR2_PIN, 2);
+        
+        // Envia dados em formato JSON
+        enviarDadosJSON(sensor1, sensor2);
+        
+        // Desliga LED
+        digitalWrite(LED_PIN, LOW);
+    }
+}
+
+// ===== FUNÇÃO PARA LER SENSOR =====
+DadosSensor lerSensor(int pino, int numero) {
+    DadosSensor dados;
+    
+    // Realiza múltiplas leituras para maior precisão
+    long soma = 0;
+    const int numLeituras = 10;
+    
+    for(int i = 0; i < numLeituras; i++) {
+        soma += analogRead(pino);
+        delay(10); // Pequeno delay entre leituras
+    }
+    
+    // Calcula média
+    dados.valor = soma / numLeituras;
+    
+    // Verifica se sensor está conectado
+    if(dados.valor < VALOR_MIN_VALIDO || dados.valor > VALOR_MAX_VALIDO) {
+        dados.valido = false;
+        dados.porcentagem = 0;
+        dados.status = "Sensor Desconectado";
+        return dados;
+    }
+    
+    dados.valido = true;
+    
+    // Calcula porcentagem de umidade (invertido: maior valor = mais seco)
+    dados.porcentagem = map(dados.valor, LIMITE_SECO, LIMITE_UMIDO, 0, 100);
+    dados.porcentagem = constrain(dados.porcentagem, 0, 100);
+    
+    // Define status baseado na umidade
+    if(dados.porcentagem < 30) {
+        dados.status = "Muito Seco";
+    } else if(dados.porcentagem < 60) {
+        dados.status = "Umidade Adequada";
+    } else {
+        dados.status = "Muito Úmido";
+    }
+    
+    return dados;
+}
+
+// ===== FUNÇÃO PARA ENVIAR DADOS EM JSON =====
+void enviarDadosJSON(DadosSensor sensor1, DadosSensor sensor2) {
+    // Cria documento JSON
+    StaticJsonDocument<512> doc;
+    
+    // Define tipo de mensagem
+    doc["type"] = "data";
+    doc["timestamp"] = millis();
+    
+    // Dados do Sensor 1
+    doc["sensor1"] = sensor1.valor;
+    doc["humidity1"] = sensor1.porcentagem;
+    doc["status1"] = sensor1.status;
+    doc["valid1"] = sensor1.valido;
+    
+    // Dados do Sensor 2
+    doc["sensor2"] = sensor2.valor;
+    doc["humidity2"] = sensor2.porcentagem;
+    doc["status2"] = sensor2.status;
+    doc["valid2"] = sensor2.valido;
+    
+    // Serializa e envia
+    serializeJson(doc, Serial);
+    Serial.println();
+}
+
+// ===== FUNÇÃO PARA ENVIAR LOGS =====
+void enviarLog(String mensagem, String nivel = "info") {
+    StaticJsonDocument<256> doc;
+    doc["type"] = "log";
+    doc["message"] = mensagem;
+    doc["level"] = nivel;
+    doc["timestamp"] = millis();
+    
+    serializeJson(doc, Serial);
+    Serial.println();
+}
+
+// ===== FUNÇÃO PARA PROCESSAR COMANDOS =====
+void processarComandosSerial() {
+    while (Serial.available()) {
+        char c = Serial.read();
+        
+        // Se recebeu nova linha, processa comando
+        if (c == '\n') {
+            comandoBuffer.trim(); // Remove espaços
+            
+            if (comandoBuffer.length() > 0) {
+                processarComando(comandoBuffer);
+                comandoBuffer = ""; // Limpa buffer
+            }
+        } else if (c != '\r') { // Ignora carriage return
+            comandoBuffer += c;
+        }
+    }
+}
+
+// ===== FUNÇÃO PARA PROCESSAR COMANDO ESPECÍFICO =====
+void processarComando(String comando) {
+    comando.toUpperCase(); // Converte para maiúsculas
+    
+    // Log do comando recebido
+    enviarLog("Comando recebido: " + comando, "info");
+    
+    // Comando TEST - Executa teste dos sensores
+    if (comando == "TEST") {
+        executarTeste();
+    }
+    // Comando RESET - Reinicia sistema
+    else if (comando == "RESET") {
+        enviarLog("Reiniciando sistema...", "warning");
+        delay(1000);
+        ESP.restart();
+    }
+    // Comando STATUS - Envia status atual
+    else if (comando == "STATUS") {
+        enviarStatus();
+    }
+    // Comando CALIBRAR - Ajusta limites
+    else if (comando.startsWith("CALIBRAR:")) {
+        processarCalibracao(comando);
+    }
+    // Comando INTERVALO - Ajusta intervalo de leitura
+    else if (comando.startsWith("INTERVALO:")) {
+        processarIntervalo(comando);
+    }
+    // Comando IRRIGAR - Simula irrigação
+    else if (comando.startsWith("IRRIGAR:")) {
+        processarIrrigacao(comando);
+    }
+    // Comando não reconhecido
+    else {
+        enviarLog("Comando não reconhecido: " + comando, "error");
+    }
+}
+
+// ===== FUNÇÃO PARA EXECUTAR TESTE =====
+void executarTeste() {
+    enviarLog("Iniciando teste dos sensores...", "info");
+    
+    // Testa Sensor 1
+    int teste1 = analogRead(SENSOR1_PIN);
+    String resultado1 = (teste1 > VALOR_MIN_VALIDO && teste1 < VALOR_MAX_VALIDO) 
+        ? "OK (Valor: " + String(teste1) + ")" 
+        : "FALHA - Verifique conexão";
+    enviarLog("Sensor 1: " + resultado1, teste1 > VALOR_MIN_VALIDO ? "success" : "error");
+    
+    // Testa Sensor 2
+    int teste2 = analogRead(SENSOR2_PIN);
+    String resultado2 = (teste2 > VALOR_MIN_VALIDO && teste2 < VALOR_MAX_VALIDO) 
+        ? "OK (Valor: " + String(teste2) + ")" 
+        : "FALHA - Verifique conexão";
+    enviarLog("Sensor 2: " + resultado2, teste2 > VALOR_MIN_VALIDO ? "success" : "error");
+    
+    // Testa LED
+    enviarLog("Testando LED...", "info");
+    for(int i = 0; i < 5; i++) {
+        digitalWrite(LED_PIN, HIGH);
+        delay(100);
+        digitalWrite(LED_PIN, LOW);
+        delay(100);
+    }
+    
+    enviarLog("Teste concluído!", "success");
+}
+
+// ===== FUNÇÃO PARA ENVIAR STATUS =====
+void enviarStatus() {
+    StaticJsonDocument<512> doc;
+    doc["type"] = "config";
+    doc["limiteSecoAtual"] = LIMITE_SECO;
+    doc["limiteUmidoAtual"] = LIMITE_UMIDO;
+    doc["intervaloAtual"] = intervaloLeitura;
+    doc["versao"] = "2.0";
+    doc["uptime"] = millis();
+    
+    serializeJson(doc, Serial);
+    Serial.println();
+}
+
+// ===== FUNÇÃO PARA PROCESSAR CALIBRAÇÃO =====
+void processarCalibracao(String comando) {
+    // Formato: CALIBRAR:TIPO:VALOR
+    int pos1 = comando.indexOf(':');
+    int pos2 = comando.indexOf(':', pos1 + 1);
+    
+    if (pos1 > 0 && pos2 > pos1) {
+        String tipo = comando.substring(pos1 + 1, pos2);
+        int valor = comando.substring(pos2 + 1).toInt();
+        
+        if (tipo == "SECO" && valor > 0 && valor < 4096) {
+            LIMITE_SECO = valor;
+            enviarLog("Limite seco ajustado para: " + String(valor), "success");
+            enviarStatus(); // Envia configuração atualizada
+        }
+        else if (tipo == "UMIDO" && valor > 0 && valor < 4096) {
+            LIMITE_UMIDO = valor;
+            enviarLog("Limite úmido ajustado para: " + String(valor), "success");
+            enviarStatus(); // Envia configuração atualizada
+        }
+        else {
+            enviarLog("Valor de calibração inválido", "error");
+        }
+    }
+}
+
+// ===== FUNÇÃO PARA PROCESSAR INTERVALO =====
+void processarIntervalo(String comando) {
+    // Formato: INTERVALO:VALOR
+    int pos = comando.indexOf(':');
+    
+    if (pos > 0) {
+        int valor = comando.substring(pos + 1).toInt();
+        
+        if (valor >= 100 && valor <= 10000) {
+            intervaloLeitura = valor;
+            enviarLog("Intervalo ajustado para: " + String(valor) + "ms", "success");
+            enviarStatus(); // Envia configuração atualizada
+        } else {
+            enviarLog("Intervalo inválido (100-10000ms)", "error");
+        }
+    }
+}
+
+// ===== FUNÇÃO PARA PROCESSAR IRRIGAÇÃO =====
+void processarIrrigacao(String comando) {
+    // Formato: IRRIGAR:SENSOR:DURACAO
+    int pos1 = comando.indexOf(':');
+    int pos2 = comando.indexOf(':', pos1 + 1);
+    
+    if (pos1 > 0 && pos2 > pos1) {
+        int sensor = comando.substring(pos1 + 1, pos2).toInt();
+        int duracao = comando.substring(pos2 + 1).toInt();
+        
+        if ((sensor == 1 || sensor == 2) && duracao > 0 && duracao <= 60) {
+            enviarLog("Irrigando sensor " + String(sensor) + " por " + String(duracao) + " segundos", "info");
+            
+            // Simula irrigação com LED piscando
+            unsigned long inicio = millis();
+            while (millis() - inicio < duracao * 1000) {
+                digitalWrite(LED_PIN, HIGH);
+                delay(250);
+                digitalWrite(LED_PIN, LOW);
+                delay(250);
+            }
+            
+            enviarLog("Irrigação concluída!", "success");
+        } else {
+            enviarLog("Parâmetros de irrigação inválidos", "error");
+        }
+    }
+}
