@@ -1,5 +1,8 @@
 #include <ArduinoJson.h>
 
+// ===== PROTÓTIPOS DAS FUNÇÕES =====
+void enviarLog(String mensagem, String nivel = "info"); // <-- Adicione esta linha
+
 // ===== CONFIGURAÇÃO DOS PINOS =====
 const int SENSOR1_PIN = 34;  // GPIO34 - Sensor de umidade 1 (ADC1_CH6)
 const int SENSOR2_PIN = 35;  // GPIO35 - Sensor de umidade 2 (ADC1_CH7)
