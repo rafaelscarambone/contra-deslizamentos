@@ -1,7 +1,7 @@
 #include <ArduinoJson.h>
 
 // ===== PROTÓTIPOS DAS FUNÇÕES =====
-void enviarLog(String mensagem, String nivel = "info"); // <-- Adicione esta linha
+void enviarLog(String mensagem, String nivel = "info"); // Valor padrão só aqui
 
 // ===== CONFIGURAÇÃO DOS PINOS =====
 const int SENSOR1_PIN = 34;  // GPIO34 - Sensor de umidade 1 (ADC1_CH6)
@@ -153,7 +153,7 @@ void enviarDadosJSON(DadosSensor sensor1, DadosSensor sensor2) {
 }
 
 // ===== FUNÇÃO PARA ENVIAR LOGS =====
-void enviarLog(String mensagem, String nivel = "info") {
+void enviarLog(String mensagem, String nivel) { // <-- Remova o valor padrão aqui
     StaticJsonDocument<256> doc;
     doc["type"] = "log";
     doc["message"] = mensagem;
